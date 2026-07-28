@@ -1,0 +1,15 @@
+import express from 'express'
+import { protectRoute } from '../middleware/protectRoute.js';
+import { getProfile, followUser, getSuggestedUsers, updateUser } from '../controllers/userController.js';
+
+
+
+const router = express.Router();
+
+router.get('/profile/:username', protectRoute,getProfile)
+router.post('/suggested',protectRoute, getSuggestedUsers)
+router.post('/follow/:id', protectRoute, followUser)
+router.post('/update',protectRoute, updateUser)
+
+
+export default router
