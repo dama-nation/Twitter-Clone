@@ -5,6 +5,8 @@ import dotenv from 'dotenv'
 import connectMongoDB from './db/connect.js'
 import cookieparser from 'cookie-parser'
 import { v2 as cloudinary } from 'cloudinary'
+import postRoutes from "./routes/post.js";
+
 
 
 const app = express();
@@ -23,6 +25,8 @@ app.use(cookieparser())
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes)
+app.use('/api/posts', postRoutes)
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`)
