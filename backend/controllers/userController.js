@@ -3,8 +3,6 @@ import Notification from "../models/notificationModel.js";
 import { v2 as cloudinary } from 'cloudinary'
 import bcrypt from 'bcryptjs'
 
-
-
 export const getProfile = async (req, res) => {
     const {username} = req.params;
     try{
