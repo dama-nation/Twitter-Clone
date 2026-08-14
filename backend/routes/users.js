@@ -5,9 +5,8 @@ import { getProfile, followUser, getSuggestedUsers, updateUser } from '../contro
 
 
 const router = express.Router();
-
 router.get('/profile/:username', protectRoute,getProfile)
-router.post('/suggested',protectRoute, getSuggestedUsers)
+router.get('/suggested',protectRoute, getSuggestedUsers)
 router.post('/follow/:id', protectRoute, followUser)
 router.post('/update',protectRoute, updateUser)
 
