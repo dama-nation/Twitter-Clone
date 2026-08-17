@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import Posts from "../../components/common/Posts";
 import ProfileHeaderSkeleton from "../../components/skeletons/ProfileHeaderSkeleton";
 import EditProfileModal from "./EditProfileModal";
-
-import { POSTS } from "../../utils/db/dummy";
 
 import { FaArrowLeft } from "react-icons/fa6";
 import { IoCalendarOutline } from "react-icons/io5";
@@ -33,10 +31,9 @@ const ProfilePage = () => {
 	const {
 		data: user,
 		isLoading,
-		refetch,
 		isRefetching,
 	} = useQuery({
-		queryKey: ["userProfile"],
+		queryKey: ["userProfile", username],
 		queryFn: async () => {
 			try {
 				const res = await fetch(`/api/users/profile/${username}`);
@@ -49,6 +46,23 @@ const ProfilePage = () => {
 				throw new Error(error);
 			}
 		},
+	});
+
+	const { data: userPosts } = useQuery({
+		queryKey: ["posts", "posts", username],
+		queryFn: async () => {
+			try {
+				const res = await fetch(`/api/posts/user/${username}`);
+				const data = await res.json();
+				if (!res.ok) {
+					throw new Error(data.error || "Something went wrong");
+				}
+				return data;
+			} catch (error) {
+				throw new Error(error.message);
+			}
+		},
+		enabled: !!user,
 	});
 
 	const { isUpdatingProfile, updateProfile } = useUpdateUserProfile();
@@ -69,13 +83,8 @@ const ProfilePage = () => {
 		}
 	};
 
-	useEffect(() => {
-		refetch();
-	}, [username, refetch]);
-
 	return (
-		<>
-			<div className='flex-[4_4_0]  border-r border-gray-700 min-h-screen '>
+		<div className='w-full border-r border-gray-700 min-h-screen'> {/* Removed flex-[4_4_0] */}
 				{/* HEADER */}
 				{(isLoading || isRefetching) && <ProfileHeaderSkeleton />}
 				{!isLoading && !isRefetching && !user && <p className='text-center text-lg mt-4'>User not found</p>}
@@ -88,7 +97,6 @@ const ProfilePage = () => {
 								</Link>
 								<div className='flex flex-col'>
 									<p className='font-bold text-lg'>{user?.fullName}</p>
-									<span className='text-sm text-slate-500'>{POSTS?.length} posts</span>
 								</div>
 							</div>
 							{/* COVER IMG */}
@@ -227,8 +235,7 @@ const ProfilePage = () => {
 
 					<Posts feedType={feedType} username={username} userId={user?._id} />
 				</div>
-			</div>
-		</>
+		</div>
 	);
 };
 export default ProfilePage;

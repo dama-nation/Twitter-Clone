@@ -130,3 +130,25 @@ export const updateUser = async (req, res) => {
         res.status(500).json({error: error.message})
     }
 }
+
+export const searchUsers = async (req, res) => {
+    try {
+        const { query } = req.params;
+        
+        // Return empty array if search is empty
+        if (!query) return res.status(200).json([]); 
+
+        // Use $regex for partial matching and $options: "i" for case-insensitivity
+        const users = await User.find({
+            $or: [
+                { username: { $regex: query, $options: "i" } },
+                { fullName: { $regex: query, $options: "i" } }
+            ]
+        }).select("-password"); // Exclude passwords from the results
+
+        res.status(200).json(users);
+    } catch (error) {
+        console.log("Error in searchUsers: ", error.message);
+        res.status(500).json({ error: error.message });
+    }
+};
