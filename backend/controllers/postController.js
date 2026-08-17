@@ -4,31 +4,38 @@ import Post from '../models/postModel.js'
 import User from '../models/userModel.js'
 
 export const createPost = async (req, res) => {
-    try{
-        const { text } = req.body
-        let { image } = req.body
-        const userId = req.user._id.toString()
+    try {
+        const { text } = req.body;
+        // Accept either 'image' or 'img' from the request body
+        let image = req.body.image || req.body.img;
+        const userId = req.user._id.toString();
 
-        const user = await User.findById(userId)
-        if(!user){return res.status(404).json({error: "User not found"})}
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
 
-        if(!text && !image){
-            return res.status(400).json({error: "Please provide text or image"})
+        if (!text && !image) {
+            return res.status(400).json({ error: "Please provide text or image" });
         }
-        if(image){
-            const uploadedResponse = await cloudinary.uploader.upload(image)
-            image = uploadedResponse.secure_url
+
+        if (image) {
+            const uploadedResponse = await cloudinary.uploader.upload(image);
+            if (!uploadedResponse || !uploadedResponse.secure_url) {
+                return res.status(400).json({ error: "Image upload failed" });
+            }
+            image = uploadedResponse.secure_url;
         }
+
         const newPost = new Post({
             user: userId,
             text,
-            image,
-        })
-        await newPost.save()
-        res.status(201).json(newPost)
-    } catch (error){
+            image, // Matches schema definition: image: { type: String }
+        });
+
+        await newPost.save();
+        res.status(201).json(newPost);
+    } catch (error) {
         console.log("Error in creating post:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({ error: error.message });
     }
 };
 

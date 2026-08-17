@@ -22,10 +22,9 @@ function App() {
                 if (!res.ok) {
                     throw new Error(data.error || "Something went wrong");
                 }
-                console.log("authUser is here:", data);
                 return data;
             } catch (error) {
-                throw new Error(error);
+                throw new Error(error.message || "Something went wrong");
             }
         },
         retry: false,
@@ -40,9 +39,12 @@ function App() {
     }
 
     return (
-        <div className='flex max-w-7xl mx-auto'> {/* Increased max-w for overall wider layout */}
+        <div className='flex w-full min-h-screen justify-center bg-black'>
+            {/* Left Sidebar - Slim & Non-intrusive */}
             {authUser && <Sidebar />}
-            <div className='flex-1'> {/* This div will take up the remaining space */}
+
+            {/* Center Main Feed - takes all available middle space */}
+            <main className='flex-1 min-w-0 border-r border-gray-700 min-h-screen'>
                 <Routes>
                     <Route path='/' element={authUser ? <HomePage /> : <Navigate to='/login' />} />
                     <Route path='/login' element={!authUser ? <LoginPage /> : <Navigate to='/' />} />
@@ -51,8 +53,11 @@ function App() {
                     <Route path='/profile/:username' element={authUser ? <ProfilePage /> : <Navigate to='/login' />} />
                     <Route path='/search' element={authUser ? <SearchPage /> : <Navigate to='/login' />} />
                 </Routes>
-            </div>
+            </main>
+
+            {/* Right Panel - Compact Fixed Column */}
             {authUser && <RightPanel />}
+            
             <Toaster />
         </div>
     );
