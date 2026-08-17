@@ -40,11 +40,11 @@ function App() {
 
     return (
         <div className='flex w-full min-h-screen justify-center bg-black'>
-            {/* Left Sidebar - Slim & Non-intrusive */}
+            {/* Sidebar (Desktop left rail / Mobile bottom nav) */}
             {authUser && <Sidebar />}
 
-            {/* Center Main Feed - takes all available middle space */}
-            <main className='flex-1 min-w-0 border-r border-gray-700 min-h-screen'>
+            {/* Main Center Outlet */}
+            <main className='flex-1 min-w-0 border-r border-gray-700 min-h-screen pb-16 sm:pb-0'>
                 <Routes>
                     <Route path='/' element={authUser ? <HomePage /> : <Navigate to='/login' />} />
                     <Route path='/login' element={!authUser ? <LoginPage /> : <Navigate to='/' />} />
@@ -55,9 +55,9 @@ function App() {
                 </Routes>
             </main>
 
-            {/* Right Panel - Compact Fixed Column */}
+            {/* Right Panel (Desktop Explore & Suggestions) */}
             {authUser && <RightPanel />}
-            
+
             <Toaster />
         </div>
     );

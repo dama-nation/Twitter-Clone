@@ -16,8 +16,7 @@ const Post = ({ post }) => {
     const queryClient = useQueryClient();
     const authUser = queryClient.getQueryData(["authUser"]);
     const postOwner = post.user;
-    
-    // Safely check if current user liked the post
+
     const isLiked = Boolean(post?.likes?.includes(authUser?._id));
     const isMyPost = authUser?._id === post?.user?._id;
     const formattedDate = formatPostDate(post.createdAt);
@@ -29,10 +28,7 @@ const Post = ({ post }) => {
                     method: "DELETE",
                 });
                 const data = await res.json();
-
-                if (!res.ok) {
-                    throw new Error(data.error || "Something went wrong");
-                }
+                if (!res.ok) throw new Error(data.error || "Something went wrong");
                 return data;
             } catch (error) {
                 throw new Error(error.message);
@@ -51,16 +47,13 @@ const Post = ({ post }) => {
                     method: "POST",
                 });
                 const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(data.error || "Something went wrong");
-                }
+                if (!res.ok) throw new Error(data.error || "Something went wrong");
                 return data;
             } catch (error) {
                 throw new Error(error.message);
             }
         },
         onSuccess: (updatedLikes) => {
-            // Update cache directly for the main posts list
             queryClient.setQueriesData({ queryKey: ["posts"] }, (oldData) => {
                 if (!oldData) return [];
                 return oldData.map((p) => {
@@ -87,10 +80,7 @@ const Post = ({ post }) => {
                     body: JSON.stringify({ text: comment }),
                 });
                 const data = await res.json();
-
-                if (!res.ok) {
-                    throw new Error(data.error || "Something went wrong");
-                }
+                if (!res.ok) throw new Error(data.error || "Something went wrong");
                 return data;
             } catch (error) {
                 throw new Error(error.message);
@@ -135,17 +125,17 @@ const Post = ({ post }) => {
                 />
             </Link>
 
-            {/* Post Main Body */}
+            {/* Post Content */}
             <div className='flex flex-col flex-1 min-w-0'>
                 {/* User Info Header */}
                 <div className='flex gap-2 items-center leading-none'>
                     <Link
                         to={`/profile/${postOwner.username}`}
-                        className='font-bold hover:underline truncate text-white text-base'
+                        className='font-bold hover:underline truncate text-white text-sm sm:text-base'
                     >
                         {postOwner.fullName}
                     </Link>
-                    <span className='text-gray-500 flex gap-1 text-sm truncate'>
+                    <span className='text-gray-500 flex gap-1 text-xs sm:text-sm truncate'>
                         <Link to={`/profile/${postOwner.username}`}>@{postOwner.username}</Link>
                         <span>·</span>
                         <span>{formattedDate}</span>
@@ -155,7 +145,7 @@ const Post = ({ post }) => {
                         <span className='flex justify-end flex-1'>
                             {!isDeleting && (
                                 <FaTrash
-                                    className='cursor-pointer hover:text-red-500 text-gray-500 transition-colors'
+                                    className='cursor-pointer hover:text-red-500 text-gray-500 transition-colors text-xs sm:text-sm'
                                     onClick={handleDeletePost}
                                 />
                             )}
@@ -164,36 +154,40 @@ const Post = ({ post }) => {
                     )}
                 </div>
 
-                {/* Post Content & Media */}
+                {/* Text & Dynamic Responsive Media */}
                 <div className='flex flex-col gap-3 overflow-hidden mt-2'>
                     {post.text && <span className='text-white text-sm sm:text-base leading-normal'>{post.text}</span>}
+                    
                     {(post.image || post.img) && (
-                        <img
-                            src={post.image || post.img}
-                            className='h-80 w-full object-cover rounded-2xl border border-gray-800'
-                            alt='Post media'
-                        />
+                        <div className='w-full max-h-[500px] rounded-2xl overflow-hidden border border-gray-800 bg-[#080808] flex items-center justify-center'>
+                            <img
+                                src={post.image || post.img}
+                                className='w-full h-auto max-h-[500px] object-contain'
+                                alt='Post media'
+                                loading='lazy'
+                            />
+                        </div>
                     )}
                 </div>
 
-                {/* Post Actions Bar */}
+                {/* Interaction Footer */}
                 <div className='flex justify-between mt-3'>
                     <div className='flex gap-4 items-center w-2/3 justify-between'>
-                        {/* Comment Modal Trigger */}
+                        {/* Comments Modal Trigger */}
                         <div
                             className='flex gap-1 items-center cursor-pointer group'
                             onClick={() => document.getElementById("comments_modal" + post._id).showModal()}
                         >
                             <FaRegComment className='w-4 h-4 text-slate-500 group-hover:text-sky-400' />
-                            <span className='text-sm text-slate-500 group-hover:text-sky-400'>
+                            <span className='text-xs sm:text-sm text-slate-500 group-hover:text-sky-400'>
                                 {post.comments?.length || 0}
                             </span>
                         </div>
 
-                        {/* Modal */}
+                        {/* DaisyUI Comments Modal */}
                         <dialog id={`comments_modal${post._id}`} className='modal border-none outline-none'>
-                            <div className='modal-box rounded-2xl border border-gray-800 bg-[#16181C] p-6'>
-                                <h3 className='font-bold text-lg mb-4 text-white'>COMMENTS</h3>
+                            <div className='modal-box rounded-2xl border border-gray-800 bg-[#16181C] p-5 sm:p-6'>
+                                <h3 className='font-bold text-base sm:text-lg mb-4 text-white'>COMMENTS</h3>
                                 <div className='flex flex-col gap-3 max-h-60 overflow-auto'>
                                     {(!post.comments || post.comments.length === 0) && (
                                         <p className='text-sm text-slate-500'>
@@ -243,8 +237,8 @@ const Post = ({ post }) => {
 
                         {/* Repost Button */}
                         <div className='flex gap-1 items-center group cursor-pointer'>
-                            <BiRepost className='w-6 h-6 text-slate-500 group-hover:text-green-500' />
-                            <span className='text-sm text-slate-500 group-hover:text-green-500'>0</span>
+                            <BiRepost className='w-5 h-5 text-slate-500 group-hover:text-green-500' />
+                            <span className='text-xs sm:text-sm text-slate-500 group-hover:text-green-500'>0</span>
                         </div>
 
                         {/* Like Button */}
@@ -257,7 +251,7 @@ const Post = ({ post }) => {
                                 <FaRegHeart className='w-4 h-4 text-slate-500 group-hover:text-pink-500 transition-transform active:scale-125' />
                             )}
                             <span
-                                className={`text-sm ${
+                                className={`text-xs sm:text-sm ${
                                     isLiked ? "text-pink-500" : "text-slate-500 group-hover:text-pink-500"
                                 }`}
                             >
