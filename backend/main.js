@@ -8,6 +8,7 @@ import cookieparser from 'cookie-parser'
 import { v2 as cloudinary } from 'cloudinary'
 import postRoutes from "./routes/post.js";
 import notificationRoutes from "./routes/notification.js";
+import { errorHandler } from "./lib/utils/errorHandler.js";
 
 
 const app = express();
@@ -37,6 +38,8 @@ if (process.env.NODE_ENV === "production") {
         res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
     });
 }
+
+app.use(errorHandler);
 
 app.listen(PORT, () => {
     connectMongoDB();

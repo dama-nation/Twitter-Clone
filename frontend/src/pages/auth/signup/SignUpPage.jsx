@@ -1,20 +1,17 @@
-import { Link } from "react-router-dom";
 import { useState } from "react";
-import XSvg from "../../../components/svgs/X";
-
-import {
-    MdOutlineMail,
-    MdDriveFileRenameOutline,
-    MdOutlineLock,
-    MdOutlineVisibility,
-    MdOutlineVisibilityOff
-} from "react-icons/md";
+import { MdOutlineMail, MdDriveFileRenameOutline, MdOutlineLock } from "react-icons/md";
 import { FaRegUser } from "react-icons/fa6";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import AuthLayout from "../../../components/auth/AuthLayout";
+import AuthInput from "../../../components/auth/AuthInput";
+import AuthError from "../../../components/auth/AuthError";
+import AuthSubmitButton from "../../../components/auth/AuthSubmitButton";
+import useFormState from "../../../hooks/useFormState";
+import { apiRequest } from "../../../utils/api";
 
 const SignUpPage = () => {
-    const [formData, setFormData] = useState({
+    const { formData, handleInputChange } = useFormState({
         email: "",
         username: "",
         fullName: "",
@@ -25,21 +22,11 @@ const SignUpPage = () => {
 
     const { mutate, isError, isPending, error } = useMutation({
         mutationFn: async ({ email, username, fullName, password }) => {
-            try {
-                const res = await fetch("/api/auth/signup", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ email, username, fullName, password }),
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Failed to create account");
-                return data;
-            } catch (error) {
-                throw new Error(error.message || "Failed to create account");
-            }
+            return apiRequest("/api/auth/signup", {
+                method: "POST",
+                body: { email, username, fullName, password },
+                fallback: "Failed to create account",
+            });
         },
         onSuccess: () => {
             toast.success("Account created successfully");
@@ -52,133 +39,60 @@ const SignUpPage = () => {
         mutate(formData);
     };
 
-    const handleInputChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
     return (
-        <div className='min-h-screen w-full flex items-center justify-center bg-black px-6 selection:bg-[#1d9bf0] selection:text-white'>
-            <div className='flex flex-col lg:flex-row items-center justify-center gap-12 lg:gap-28 w-full max-w-5xl py-8'>
-                
-                {/* Left Brand Identity */}
-                <div className='hidden lg:flex items-center justify-center flex-shrink-0'>
-                    <XSvg className='w-72 h-72 fill-white drop-shadow-[0_0_35px_rgba(255,255,255,0.05)]' />
-                </div>
-
-                {/* Right Form Container */}
-                <div className='w-full max-w-md flex flex-col justify-center'>
-                    <div className='mb-8'>
-                        <XSvg className='w-10 h-10 lg:hidden fill-white mb-6' />
-                        <h1 className='text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-sans'>
-                            Happening now
-                        </h1>
-                        <h2 className='text-xl sm:text-2xl font-bold text-gray-200 mt-2 tracking-tight'>
-                            Join today.
-                        </h2>
-                    </div>
-
-                    <form className='flex flex-col gap-3.5' onSubmit={handleSubmit}>
-                        {/* Email Input */}
-                        <div className='group flex items-center gap-3 bg-[#000000] border border-[#333639] focus-within:border-[#1d9bf0] focus-within:ring-1 focus-within:ring-[#1d9bf0] rounded-xl px-4 py-3.5 transition-all duration-200'>
-                            <MdOutlineMail className='w-5 h-5 text-gray-500 group-focus-within:text-[#1d9bf0] transition-colors flex-shrink-0' />
-                            <input
-                                type='email'
-                                className='bg-transparent border-none outline-none w-full text-white placeholder-gray-500 text-[15px]'
-                                placeholder='Email'
-                                name='email'
-                                onChange={handleInputChange}
-                                value={formData.email}
-                                required
-                            />
-                        </div>
-
-                        {/* Full Name Input */}
-                        <div className='group flex items-center gap-3 bg-[#000000] border border-[#333639] focus-within:border-[#1d9bf0] focus-within:ring-1 focus-within:ring-[#1d9bf0] rounded-xl px-4 py-3.5 transition-all duration-200'>
-                            <MdDriveFileRenameOutline className='w-5 h-5 text-gray-500 group-focus-within:text-[#1d9bf0] transition-colors flex-shrink-0' />
-                            <input
-                                type='text'
-                                className='bg-transparent border-none outline-none w-full text-white placeholder-gray-500 text-[15px]'
-                                placeholder='Full Name'
-                                name='fullName'
-                                onChange={handleInputChange}
-                                value={formData.fullName}
-                                required
-                            />
-                        </div>
-
-                        {/* Username Input */}
-                        <div className='group flex items-center gap-3 bg-[#000000] border border-[#333639] focus-within:border-[#1d9bf0] focus-within:ring-1 focus-within:ring-[#1d9bf0] rounded-xl px-4 py-3.5 transition-all duration-200'>
-                            <FaRegUser className='w-4 h-4 text-gray-500 group-focus-within:text-[#1d9bf0] transition-colors flex-shrink-0 mx-0.5' />
-                            <input
-                                type='text'
-                                className='bg-transparent border-none outline-none w-full text-white placeholder-gray-500 text-[15px]'
-                                placeholder='Username'
-                                name='username'
-                                onChange={handleInputChange}
-                                value={formData.username}
-                                required
-                            />
-                        </div>
-
-                        {/* Password Input */}
-                        <div className='group flex items-center gap-3 bg-[#000000] border border-[#333639] focus-within:border-[#1d9bf0] focus-within:ring-1 focus-within:ring-[#1d9bf0] rounded-xl px-4 py-3.5 transition-all duration-200'>
-                            <MdOutlineLock className='w-5 h-5 text-gray-500 group-focus-within:text-[#1d9bf0] transition-colors flex-shrink-0' />
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                className='bg-transparent border-none outline-none w-full text-white placeholder-gray-500 text-[15px]'
-                                placeholder='Password'
-                                name='password'
-                                onChange={handleInputChange}
-                                value={formData.password}
-                                required
-                            />
-                            <button
-                                type='button'
-                                onClick={() => setShowPassword(!showPassword)}
-                                className='text-gray-500 hover:text-gray-300 transition-colors focus:outline-none'
-                            >
-                                {showPassword ? (
-                                    <MdOutlineVisibilityOff className='w-5 h-5' />
-                                ) : (
-                                    <MdOutlineVisibility className='w-5 h-5' />
-                                )}
-                            </button>
-                        </div>
-
-                        {/* Error Alert Box */}
-                        {isError && (
-                            <div className='p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs text-center font-medium animate-fadeIn'>
-                                {error.message}
-                            </div>
-                        )}
-
-                        {/* Submit Button */}
-                        <button
-                            type='submit'
-                            disabled={isPending}
-                            className='w-full py-3.5 px-4 mt-2 bg-white hover:bg-[#e6e6e6] active:bg-[#cccccc] text-black font-bold rounded-full transition duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-[15px]'
-                        >
-                            {isPending ? (
-                                <>
-                                    <span className='loading loading-spinner loading-sm text-black'></span>
-                                    <span>Creating account...</span>
-                                </>
-                            ) : (
-                                "Create account"
-                            )}
-                        </button>
-                    </form>
-
-                    {/* Footer / Inline Centralized Text */}
-                    <div className='mt-8 pt-6 border-t border-[#2f3336] flex items-center justify-center gap-1.5 text-sm'>
-                        <span className='text-gray-500'>Already have an account?</span>
-                        <Link to='/login' className='text-[#1d9bf0] font-semibold hover:underline'>
-                            Sign in
-                        </Link>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <AuthLayout
+            subtitle='Join today.'
+            footerText='Already have an account?'
+            footerLink='/login'
+            footerLabel='Sign in'
+        >
+            <form className='flex flex-col gap-3.5' onSubmit={handleSubmit}>
+                <AuthInput
+                    icon={<MdOutlineMail className='w-5 h-5 text-gray-500 group-focus-within:text-[#1d9bf0] transition-colors flex-shrink-0' />}
+                    type='email'
+                    className='bg-transparent border-none outline-none w-full text-white placeholder-gray-500 text-[15px]'
+                    placeholder='Email'
+                    name='email'
+                    onChange={handleInputChange}
+                    value={formData.email}
+                    required
+                />
+                <AuthInput
+                    icon={<MdDriveFileRenameOutline className='w-5 h-5 text-gray-500 group-focus-within:text-[#1d9bf0] transition-colors flex-shrink-0' />}
+                    type='text'
+                    className='bg-transparent border-none outline-none w-full text-white placeholder-gray-500 text-[15px]'
+                    placeholder='Full Name'
+                    name='fullName'
+                    onChange={handleInputChange}
+                    value={formData.fullName}
+                    required
+                />
+                <AuthInput
+                    icon={<FaRegUser className='w-4 h-4 text-gray-500 group-focus-within:text-[#1d9bf0] transition-colors flex-shrink-0 mx-0.5' />}
+                    type='text'
+                    className='bg-transparent border-none outline-none w-full text-white placeholder-gray-500 text-[15px]'
+                    placeholder='Username'
+                    name='username'
+                    onChange={handleInputChange}
+                    value={formData.username}
+                    required
+                />
+                <AuthInput
+                    icon={<MdOutlineLock className='w-5 h-5 text-gray-500 group-focus-within:text-[#1d9bf0] transition-colors flex-shrink-0' />}
+                    type='password'
+                    className='bg-transparent border-none outline-none w-full text-white placeholder-gray-500 text-[15px]'
+                    placeholder='Password'
+                    name='password'
+                    onChange={handleInputChange}
+                    value={formData.password}
+                    required
+                    showPassword={showPassword}
+                    setShowPassword={setShowPassword}
+                />
+                {isError && <AuthError message={error.message} />}
+                <AuthSubmitButton isPending={isPending} pendingLabel='Creating account...' label='Create account' />
+            </form>
+        </AuthLayout>
     );
 };
 

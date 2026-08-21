@@ -14,6 +14,9 @@ import { formatMemberSinceDate } from "../../utils/date";
 
 import useFollow from "../../hooks/useFollow";
 import useUpdateUserProfile from "../../hooks/useUpdateUserProfile";
+import { apiRequest } from "../../utils/api";
+import { AVATAR_PLACEHOLDER } from "../../utils/constants";
+import { readFileAsDataUrl } from "../../utils/image";
 
 const ProfilePage = () => {
 	const [coverImg, setCoverImg] = useState(null);
@@ -34,34 +37,12 @@ const ProfilePage = () => {
 		isRefetching,
 	} = useQuery({
 		queryKey: ["userProfile", username],
-		queryFn: async () => {
-			try {
-				const res = await fetch(`/api/users/profile/${username}`);
-				const data = await res.json();
-				if (!res.ok) {
-					throw new Error(data.error || "Something went wrong");
-				}
-				return data;
-			} catch (error) {
-				throw new Error(error);
-			}
-		},
+		queryFn: () => apiRequest(`/api/users/profile/${username}`),
 	});
 
-	const { data: userPosts } = useQuery({
+	useQuery({
 		queryKey: ["posts", "posts", username],
-		queryFn: async () => {
-			try {
-				const res = await fetch(`/api/posts/user/${username}`);
-				const data = await res.json();
-				if (!res.ok) {
-					throw new Error(data.error || "Something went wrong");
-				}
-				return data;
-			} catch (error) {
-				throw new Error(error.message);
-			}
-		},
+		queryFn: () => apiRequest(`/api/posts/user/${username}`),
 		enabled: !!user,
 	});
 
@@ -74,12 +55,10 @@ const ProfilePage = () => {
 	const handleImgChange = (e, state) => {
 		const file = e.target.files[0];
 		if (file) {
-			const reader = new FileReader();
-			reader.onload = () => {
-				state === "coverImg" && setCoverImg(reader.result);
-				state === "profileImg" && setProfileImg(reader.result);
-			};
-			reader.readAsDataURL(file);
+			readFileAsDataUrl(file).then((result) => {
+				state === "coverImg" && setCoverImg(result);
+				state === "profileImg" && setProfileImg(result);
+			});
 		}
 	};
 
@@ -132,7 +111,7 @@ const ProfilePage = () => {
 								{/* USER AVATAR */}
 								<div className='avatar absolute -bottom-16 left-4'>
 									<div className='w-32 rounded-full relative group/avatar'>
-										<img src={profileImg || user?.profileImg || "/avatar-placeholder.png"} />
+										<img src={profileImg || user?.profileImg || AVATAR_PLACEHOLDER} />
 										<div className='absolute top-5 right-3 p-1 bg-primary rounded-full group-hover/avatar:opacity-100 opacity-0 cursor-pointer'>
 											{isMyProfile && (
 												<MdEdit

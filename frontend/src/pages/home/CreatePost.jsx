@@ -4,6 +4,9 @@ import { useRef, useState } from "react";
 import { IoCloseSharp } from "react-icons/io5";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
+import { apiRequest } from "../../utils/api";
+import { AVATAR_PLACEHOLDER } from "../../utils/constants";
+import { readFileAsDataUrl } from "../../utils/image";
 
 const CreatePost = () => {
     const [text, setText] = useState("");
@@ -19,25 +22,11 @@ const CreatePost = () => {
         isError,
         error,
     } = useMutation({
-        mutationFn: async ({ text, img }) => {
-            try {
-                const res = await fetch("/api/posts/create", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    // Matching 'image' key to your backend controller
-                    body: JSON.stringify({ text, image: img }),
-                });
-                const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(data.error || "Something went wrong");
-                }
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
+        mutationFn: ({ text, img }) =>
+            apiRequest("/api/posts/create", {
+                method: "POST",
+                body: { text, image: img },
+            }),
 
         onSuccess: () => {
             setText("");
@@ -55,11 +44,7 @@ const CreatePost = () => {
     const handleImgChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                setImg(reader.result);
-            };
-            reader.readAsDataURL(file);
+            readFileAsDataUrl(file).then(setImg);
         }
     };
 
@@ -67,7 +52,7 @@ const CreatePost = () => {
         <div className='flex p-4 items-start gap-4 border-b border-gray-700'>
             <div className='w-10 h-10 rounded-full overflow-hidden flex-shrink-0'>
                 <img 
-                    src={authUser?.profileImg || "/avatar-placeholder.png"} 
+                    src={authUser?.profileImg || AVATAR_PLACEHOLDER}
                     className='w-full h-full object-cover' 
                     alt='Profile' 
                 />

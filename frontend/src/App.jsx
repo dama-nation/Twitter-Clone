@@ -10,22 +10,15 @@ import SearchPage from './pages/search/SearchPage.jsx';
 import { Toaster } from 'react-hot-toast';
 import LoadingSpinner from './components/common/LoadingSpinner.jsx';
 import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from './utils/api';
 
 function App() {
     const { data: authUser, isLoading } = useQuery({
         queryKey: ["authUser"],
         queryFn: async () => {
-            try {
-                const res = await fetch("/api/auth/me");
-                const data = await res.json();
-                if (data.error) return null;
-                if (!res.ok) {
-                    throw new Error(data.error || "Something went wrong");
-                }
-                return data;
-            } catch (error) {
-                throw new Error(error.message || "Something went wrong");
-            }
+            const data = await apiRequest("/api/auth/me", { ignoreError: true });
+            if (data.error) return null;
+            return data;
         },
         retry: false,
     });

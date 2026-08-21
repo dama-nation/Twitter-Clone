@@ -10,6 +10,8 @@ import { toast } from "react-hot-toast";
 
 import LoadingSpinner from "./LoadingSpinner";
 import { formatPostDate } from "../../utils/date";
+import { apiRequest } from "../../utils/api";
+import { AVATAR_PLACEHOLDER } from "../../utils/constants";
 
 const Post = ({ post }) => {
     const [comment, setComment] = useState("");
@@ -22,18 +24,7 @@ const Post = ({ post }) => {
     const formattedDate = formatPostDate(post.createdAt);
 
     const { mutate: deletePost, isPending: isDeleting } = useMutation({
-        mutationFn: async () => {
-            try {
-                const res = await fetch(`/api/posts/${post._id}`, {
-                    method: "DELETE",
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
+        mutationFn: () => apiRequest(`/api/posts/${post._id}`, { method: "DELETE" }),
         onSuccess: () => {
             toast.success("Post deleted successfully");
             queryClient.invalidateQueries({ queryKey: ["posts"] });
@@ -41,18 +32,7 @@ const Post = ({ post }) => {
     });
 
     const { mutate: likePost, isPending: isLiking } = useMutation({
-        mutationFn: async () => {
-            try {
-                const res = await fetch(`/api/posts/like/${post._id}`, {
-                    method: "POST",
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
+        mutationFn: () => apiRequest(`/api/posts/like/${post._id}`, { method: "POST" }),
         onSuccess: (updatedLikes) => {
             queryClient.setQueriesData({ queryKey: ["posts"] }, (oldData) => {
                 if (!oldData) return [];
@@ -70,22 +50,11 @@ const Post = ({ post }) => {
     });
 
     const { mutate: commentPost, isPending: isCommenting } = useMutation({
-        mutationFn: async () => {
-            try {
-                const res = await fetch(`/api/posts/comment/${post._id}`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ text: comment }),
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
+        mutationFn: () =>
+            apiRequest(`/api/posts/comment/${post._id}`, {
+                method: "POST",
+                body: { text: comment },
+            }),
         onSuccess: () => {
             toast.success("Comment posted successfully");
             setComment("");
@@ -119,7 +88,7 @@ const Post = ({ post }) => {
                 className='w-10 h-10 rounded-full overflow-hidden flex-shrink-0 mt-0.5'
             >
                 <img
-                    src={postOwner.profileImg || "/avatar-placeholder.png"}
+                    src={postOwner.profileImg || AVATAR_PLACEHOLDER}
                     className='w-full h-full object-cover'
                     alt={postOwner.fullName}
                 />
@@ -198,7 +167,7 @@ const Post = ({ post }) => {
                                         <div key={c._id} className='flex gap-2 items-start'>
                                             <div className='w-8 h-8 rounded-full overflow-hidden flex-shrink-0'>
                                                 <img
-                                                    src={c.user?.profileImg || "/avatar-placeholder.png"}
+                                                    src={c.user?.profileImg || AVATAR_PLACEHOLDER}
                                                     className='w-full h-full object-cover'
                                                     alt={c.user?.fullName}
                                                 />
