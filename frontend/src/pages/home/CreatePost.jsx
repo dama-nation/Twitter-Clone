@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { IoCloseSharp } from "react-icons/io5";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
+import { apiRequest } from "../../utils/api";
 
 const CreatePost = () => {
     const [text, setText] = useState("");
@@ -19,31 +20,17 @@ const CreatePost = () => {
         isError,
         error,
     } = useMutation({
-        mutationFn: async ({ text, img }) => {
-            try {
-                const res = await fetch("/api/posts/create", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    // Matching 'image' key to your backend controller
-                    body: JSON.stringify({ text, image: img }),
-                });
-                const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(data.error || "Something went wrong");
-                }
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
-
+        // Matching 'image' key to the backend controller
+        mutationFn: ({ text, img }) =>
+            apiRequest("/api/posts/create", { method: "POST", body: { text, image: img } }),
         onSuccess: () => {
             setText("");
             setImg(null);
             toast.success("Post created successfully");
-            queryClient.invalidateQueries({ queryKey: ["posts"] });
+            return queryClient.invalidateQueries({ queryKey: ["posts"] });
+        },
+        onError: (error) => {
+            toast.error(error.message);
         },
     });
 
@@ -59,6 +46,7 @@ const CreatePost = () => {
             reader.onload = () => {
                 setImg(reader.result);
             };
+            reader.onerror = () => toast.error("Could not read the selected image");
             reader.readAsDataURL(file);
         }
     };

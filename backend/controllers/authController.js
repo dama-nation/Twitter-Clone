@@ -2,9 +2,24 @@ import { generateTokenAndSetCookie } from "../lib/utils/generateToken.js";
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
 
-export const signup = async (req, res) => {
+const publicUser = (user) => ({
+    _id: user._id,
+    fullName: user.fullName,
+    username: user.username,
+    email: user.email,
+    followers: user.followers,
+    following: user.following,
+    profileImg: user.profileImg,
+    coverImg: user.coverImg,
+});
+
+export const signup = async (req, res, next) => {
     try{
-        const {fullName, username, email, password} = req.body;
+        const {fullName, username, email, password} = req.body ?? {};
+
+        if(!fullName || !username || !email || !password){
+            return res.status(400).json({error: "fullName, username, email and password are required"});
+        }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if(!emailRegex.test(email)){
             return res.status(400).json({error: "Invalid email format"});
@@ -31,74 +46,54 @@ export const signup = async (req, res) => {
             password: hashedPassword
         });
 
-        if(newUser){
-            generateTokenAndSetCookie(newUser._id, res);
-            await newUser.save();
+        // Persist first: a failing save must not leave the client holding a
+        // session cookie for a user that does not exist.
+        await newUser.save();
+        generateTokenAndSetCookie(newUser._id, res);
 
-            res.status(201).json({
-                _id: newUser._id,
-                fullName: newUser.fullName,
-                username: newUser.username,
-                email: newUser.email,
-                followers: newUser.followers,
-                following: newUser.following,
-                profileImg: newUser.profileImg,
-                coverImg: newUser.coverImg,
-            });
-        } else{
-            res.status(400).json({error: "Invalid User data"})
-        }
-
+        res.status(201).json(publicUser(newUser));
     }catch(error){
-        res.status(500).json({error: "Internal Server Error"})
-        console.log(`Error creating user: ${error.message}`);
+        next(error);
     }
 }
 
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
     try{
-        const {username, password} = req.body;
+        const {username, password} = req.body ?? {};
+        if(!username || !password){
+            return res.status(400).json({error: "Username and password are required"});
+        }
+
         const user = await User.findOne({username});
         const correctPassword = await bcrypt.compare(password, user?.password || "");
 
         if(!user || !correctPassword){
             return res.status(400).json({error: "Invalid username or password"});
-            
         }
         generateTokenAndSetCookie(user._id, res);
-        res.status(200).json({
-            _id: user._id,
-            fullName: user.fullName,
-            username: user.username,
-            email: user.email,
-            followers: user.followers,
-            following: user.following,
-            profileImg: user.profileImg,
-            coverImg: user.coverImg,
-        })
-
+        res.status(200).json(publicUser(user))
     } catch(error){
-        console.log(`Error in logging user: ${error.message}`)
-        res.status(500).json({error: 'internal Server Error'});
+        next(error);
     }
 }
 
-export const logout = async (req, res) => {
+export const logout = async (req, res, next) => {
     try{
         res.cookie("jwt", "", {maxAge: 0});
         res.status(200).json({message: "User logged out successfully"})
     } catch(error){
-        console.log(`Error in logging out user: ${error.message}`)
-        res.status(500).json({error: 'internal Server Error'});
+        next(error);
     }
 }
 
-export const getMe = async (req, res) => {
+export const getMe = async (req, res, next) => {
     try{
         const user = await User.findById(req.user._id).select("-password");
+        if(!user){
+            return res.status(404).json({error: "User not found"});
+        }
         res.status(200).json(user);
     } catch (error){
-        console.log("Error in the getMe controller", error.message);
-        res.status(500).json({error: "Internal server error"})
+        next(error);
     }
 }

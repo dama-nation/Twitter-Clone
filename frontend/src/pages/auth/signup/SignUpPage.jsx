@@ -12,6 +12,7 @@ import {
 import { FaRegUser } from "react-icons/fa6";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { apiRequest } from "../../../utils/api";
 
 const SignUpPage = () => {
     const [formData, setFormData] = useState({
@@ -24,26 +25,14 @@ const SignUpPage = () => {
     const queryClient = useQueryClient();
 
     const { mutate, isError, isPending, error } = useMutation({
-        mutationFn: async ({ email, username, fullName, password }) => {
-            try {
-                const res = await fetch("/api/auth/signup", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ email, username, fullName, password }),
-                });
-
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Failed to create account");
-                return data;
-            } catch (error) {
-                throw new Error(error.message || "Failed to create account");
-            }
-        },
+        mutationFn: ({ email, username, fullName, password }) =>
+            apiRequest("/api/auth/signup", {
+                method: "POST",
+                body: { email, username, fullName, password },
+            }),
         onSuccess: () => {
             toast.success("Account created successfully");
-            queryClient.invalidateQueries({ queryKey: ["authUser"] });
+            return queryClient.invalidateQueries({ queryKey: ["authUser"] });
         },
     });
 

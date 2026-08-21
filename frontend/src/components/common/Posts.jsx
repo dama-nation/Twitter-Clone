@@ -1,6 +1,7 @@
 import Post from "./Post";
 import PostSkeleton from "../skeletons/PostSkeleton";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "../../utils/api";
 
 const Posts = ({ feedType, username, userId }) => {
 	const getPostEndpoint = () => {
@@ -39,22 +40,12 @@ const Posts = ({ feedType, username, userId }) => {
 		data: posts,
 		isLoading,
 		isRefetching,
+		isError,
+		error,
+		refetch,
 	} = useQuery({
 		queryKey: getQueryKey(),
-		queryFn: async () => {
-			try {
-				const res = await fetch(POST_ENDPOINT);
-				const data = await res.json();
-
-				if (!res.ok) {
-					throw new Error(data.error || "Something went wrong");
-				}
-
-				return data;
-			} catch (error) {
-				throw new Error(error);
-			}
-		},
+		queryFn: () => apiRequest(POST_ENDPOINT),
 	});
 
 	return (
@@ -66,7 +57,15 @@ const Posts = ({ feedType, username, userId }) => {
 					<PostSkeleton />
 				</div>
 			)}
-			{!isLoading && !isRefetching && posts?.length === 0 && (
+			{!isLoading && !isRefetching && isError && (
+				<div className='flex flex-col items-center gap-2 my-4'>
+					<p className='text-red-400 text-sm'>{error.message}</p>
+					<button className='btn btn-sm rounded-full' onClick={() => refetch()}>
+						Retry
+					</button>
+				</div>
+			)}
+			{!isLoading && !isRefetching && !isError && posts?.length === 0 && (
 				<p className='text-center my-4'>No posts in this tab. Switch 👻</p>
 			)}
 			{!isLoading && !isRefetching && posts && (
