@@ -7,37 +7,18 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import { IoSettingsOutline } from "react-icons/io5";
 import { FaUser } from "react-icons/fa";
 import { FaHeart } from "react-icons/fa6";
+import { apiRequest } from "../../utils/api";
+import { AVATAR_PLACEHOLDER } from "../../utils/constants";
 
 const NotificationPage = () => {
 	const queryClient = useQueryClient();
 	const { data: notifications, isLoading } = useQuery({
 		queryKey: ["notifications"],
-		queryFn: async () => {
-			try {
-				const res = await fetch("/api/notifications");
-				const data = await res.json();
-				if (!res.ok) throw new Error(data.error || "Something went wrong");
-				return data;
-			} catch (error) {
-				throw new Error(error);
-			}
-		},
+		queryFn: () => apiRequest("/api/notifications"),
 	});
 
 	const { mutate: deleteNotifications } = useMutation({
-		mutationFn: async () => {
-			try {
-				const res = await fetch("/api/notifications", {
-					method: "DELETE",
-				});
-				const data = await res.json();
-
-				if (!res.ok) throw new Error(data.error || "Something went wrong");
-				return data;
-			} catch (error) {
-				throw new Error(error);
-			}
-		},
+		mutationFn: () => apiRequest("/api/notifications", { method: "DELETE" }),
 		onSuccess: () => {
 			toast.success("Notifications deleted successfully");
 			queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -80,7 +61,7 @@ const NotificationPage = () => {
 							<Link to={`/profile/${notification.from.username}`}>
 								<div className='avatar'>
 									<div className='w-8 rounded-full'>
-										<img src={notification.from.profileImg || "/avatar-placeholder.png"} />
+										<img src={notification.from.profileImg || AVATAR_PLACEHOLDER} />
 									</div>
 								</div>
 								<div className='flex gap-1'>

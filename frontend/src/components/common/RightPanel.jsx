@@ -1,73 +1,29 @@
-import { Link } from "react-router-dom";
 import RightPanelSkeleton from "../skeletons/RightPanelSkeleton";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { IoSearchOutline } from "react-icons/io5";
 import LoadingSpinner from "./LoadingSpinner";
-import toast from "react-hot-toast";
+import UserListItem from "./UserListItem";
+import useFollow from "../../hooks/useFollow";
+import useSearchUsers from "../../hooks/useSearchUsers";
+import { apiRequest } from "../../utils/api";
 
 const RightPanel = () => {
     const [searchQuery, setSearchQuery] = useState("");
-    const queryClient = useQueryClient();
-
     const { data: suggestedUsers, isLoading } = useQuery({
         queryKey: ["suggestedUsers"],
-        queryFn: async () => {
-            try {
-                const res = await fetch("/api/users/suggested");
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        }
+        queryFn: () => apiRequest("/api/users/suggested"),
     });
 
-    const { data: searchResults, refetch: searchUsers, isFetching: isSearching, isError: isSearchError, error: searchError } = useQuery({
-        queryKey: ["searchUsers", searchQuery],
-        queryFn: async () => {
-            if (!searchQuery) return [];
-            try {
-                const res = await fetch(`/api/users/search/${searchQuery}`);
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
-        enabled: false,
-    });
+    const { data: searchResults, refetch: searchUsers, isFetching: isSearching, isError: isSearchError, error: searchError } =
+        useSearchUsers(searchQuery, "searchUsers");
 
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) searchUsers();
     };
 
-    const { mutate: follow, isPending, variables: pendingUserId } = useMutation({
-        mutationFn: async (userId) => {
-            try {
-                const res = await fetch(`/api/users/follow/${userId}`, {
-                    method: "POST",
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
-        onSuccess: () => {
-            Promise.all([
-                queryClient.invalidateQueries({ queryKey: ["suggestedUsers"] }),
-                queryClient.invalidateQueries({ queryKey: ["authUser"] }),
-            ]);
-        },
-        onError: (error) => {
-            toast.error(error.message);
-        },
-    });
+    const { follow, isPending, pendingUserId } = useFollow();
 
     return (
         <div className='hidden lg:block my-4 mx-3 w-[260px] flex-shrink-0'>
@@ -103,30 +59,11 @@ const RightPanel = () => {
                         {!isSearching && !isSearchError && searchResults?.length > 0 && (
                             <div className='flex flex-col gap-3'>
                                 {searchResults.map((user) => (
-                                    <Link
-                                        to={`/profile/${user.username}`}
-                                        className='flex items-center justify-between gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors'
-                                        key={user._id}
-                                    >
-                                        <div className='flex gap-2 items-center min-w-0'>
-                                            <div className='w-8 h-8 rounded-full overflow-hidden flex-shrink-0'>
-                                                <img
-                                                    src={user.profileImg || "/avatar-placeholder.png"}
-                                                    className='w-full h-full object-cover'
-                                                    alt='Profile'
-                                                />
-                                            </div>
-                                            <div className='flex flex-col min-w-0 leading-tight'>
-                                                <span className='font-semibold tracking-tight truncate w-20 text-white text-xs'>
-                                                    {user.fullName}
-                                                </span>
-                                                <span className='text-[11px] text-slate-500 truncate'>@{user.username}</span>
-                                            </div>
-                                        </div>
+                                    <UserListItem user={user} key={user._id}>
                                         <button className='btn bg-white text-black hover:bg-white hover:opacity-90 rounded-full btn-xs px-3'>
                                             View
                                         </button>
-                                    </Link>
+                                    </UserListItem>
                                 ))}
                             </div>
                         )}
@@ -146,26 +83,7 @@ const RightPanel = () => {
                         )}
                         {!isLoading &&
                             suggestedUsers?.map((user) => (
-                                <Link
-                                    to={`/profile/${user.username}`}
-                                    className='flex items-center justify-between gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors'
-                                    key={user._id}
-                                >
-                                    <div className='flex gap-2 items-center min-w-0'>
-                                        <div className='w-8 h-8 rounded-full overflow-hidden flex-shrink-0'>
-                                            <img
-                                                src={user.profileImg || "/avatar-placeholder.png"}
-                                                className='w-full h-full object-cover'
-                                                alt='Profile'
-                                            />
-                                        </div>
-                                        <div className='flex flex-col min-w-0 leading-tight'>
-                                            <span className='font-semibold tracking-tight truncate w-20 text-white text-xs'>
-                                                {user.fullName}
-                                            </span>
-                                            <span className='text-[11px] text-slate-500 truncate'>@{user.username}</span>
-                                        </div>
-                                    </div>
+                                <UserListItem user={user} key={user._id}>
                                     <button
                                         className='btn bg-white text-black hover:bg-white hover:opacity-90 rounded-full btn-xs px-3'
                                         onClick={(e) => {
@@ -179,7 +97,7 @@ const RightPanel = () => {
                                             "Follow"
                                         )}
                                     </button>
-                                </Link>
+                                </UserListItem>
                             ))}
                     </div>
                 </div>

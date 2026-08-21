@@ -1,26 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { IoSearchOutline } from "react-icons/io5";
+import useSearchUsers from "../../hooks/useSearchUsers";
+import { AVATAR_PLACEHOLDER } from "../../utils/constants";
 
 const SearchPage = () => {
     const [searchQuery, setSearchQuery] = useState("");
 
-    const { data: searchResults, refetch: searchUsers, isFetching } = useQuery({
-        queryKey: ["searchUsersPage", searchQuery],
-        queryFn: async () => {
-            if (!searchQuery) return [];
-            try {
-                const res = await fetch(`/api/users/search/${searchQuery}`);
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
-        enabled: false,
-    });
+    const { data: searchResults, refetch: searchUsers, isFetching } = useSearchUsers(searchQuery, "searchUsersPage");
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -65,7 +52,7 @@ const SearchPage = () => {
                     >
                         <div className='flex gap-2 items-center'>
                             <div className='w-12 h-12 rounded-full overflow-hidden flex-shrink-0'>
-                                <img src={user.profileImg || "/avatar-placeholder.png"} className='w-full h-full object-cover' alt='Profile' />
+                                <img src={user.profileImg || AVATAR_PLACEHOLDER} className='w-full h-full object-cover' alt='Profile' />
                             </div>
                             <div className='flex flex-col'>
                                 <span className='font-bold text-white truncate w-40'>{user.fullName}</span>

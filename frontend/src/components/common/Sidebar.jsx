@@ -7,23 +7,15 @@ import { Link, useLocation } from "react-router-dom";
 import { BiLogOut } from "react-icons/bi";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { apiRequest } from "../../utils/api";
+import { AVATAR_PLACEHOLDER } from "../../utils/constants";
 
 const Sidebar = () => {
     const queryClient = useQueryClient();
     const location = useLocation();
 
     const { mutate: logout } = useMutation({
-        mutationFn: async () => {
-            try {
-                const res = await fetch("/api/auth/logout", {
-                    method: "POST",
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-            } catch (error) {
-                throw new Error(error.message || "Something went wrong");
-            }
-        },
+        mutationFn: () => apiRequest("/api/auth/logout", { method: "POST" }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["authUser"] });
         },
@@ -101,7 +93,7 @@ const Sidebar = () => {
                             >
                                 <div className='w-9 h-9 rounded-full overflow-hidden flex-shrink-0'>
                                     <img
-                                        src={authUser?.profileImg || "/avatar-placeholder.png"}
+                                        src={authUser?.profileImg || AVATAR_PLACEHOLDER}
                                         className='w-full h-full object-cover'
                                         alt={authUser?.fullName}
                                     />
