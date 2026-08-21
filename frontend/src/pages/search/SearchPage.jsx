@@ -2,22 +2,16 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { IoSearchOutline } from "react-icons/io5";
+import { apiRequest } from "../../utils/api";
 
 const SearchPage = () => {
     const [searchQuery, setSearchQuery] = useState("");
 
-    const { data: searchResults, refetch: searchUsers, isFetching } = useQuery({
+    const { data: searchResults, refetch: searchUsers, isFetching, isError, error } = useQuery({
         queryKey: ["searchUsersPage", searchQuery],
-        queryFn: async () => {
+        queryFn: () => {
             if (!searchQuery) return [];
-            try {
-                const res = await fetch(`/api/users/search/${searchQuery}`);
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
+            return apiRequest(`/api/users/search/${encodeURIComponent(searchQuery)}`);
         },
         enabled: false,
     });
@@ -53,7 +47,10 @@ const SearchPage = () => {
 
             {/* Results Display */}
             <div className='flex flex-col'>
-                {!isFetching && searchResults?.length === 0 && searchQuery && (
+                {!isFetching && isError && (
+                    <div className='p-4 text-center text-red-400 text-sm'>{error.message}</div>
+                )}
+                {!isFetching && !isError && searchResults?.length === 0 && searchQuery && (
                     <div className='p-4 text-center text-gray-500'>No users found for "{searchQuery}"</div>
                 )}
                 

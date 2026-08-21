@@ -14,6 +14,8 @@ import { formatMemberSinceDate } from "../../utils/date";
 
 import useFollow from "../../hooks/useFollow";
 import useUpdateUserProfile from "../../hooks/useUpdateUserProfile";
+import { apiRequest } from "../../utils/api";
+import toast from "react-hot-toast";
 
 const ProfilePage = () => {
 	const [coverImg, setCoverImg] = useState(null);
@@ -32,36 +34,16 @@ const ProfilePage = () => {
 		data: user,
 		isLoading,
 		isRefetching,
+		isError,
+		error,
 	} = useQuery({
 		queryKey: ["userProfile", username],
-		queryFn: async () => {
-			try {
-				const res = await fetch(`/api/users/profile/${username}`);
-				const data = await res.json();
-				if (!res.ok) {
-					throw new Error(data.error || "Something went wrong");
-				}
-				return data;
-			} catch (error) {
-				throw new Error(error);
-			}
-		},
+		queryFn: () => apiRequest(`/api/users/profile/${username}`),
 	});
 
-	const { data: userPosts } = useQuery({
+	useQuery({
 		queryKey: ["posts", "posts", username],
-		queryFn: async () => {
-			try {
-				const res = await fetch(`/api/posts/user/${username}`);
-				const data = await res.json();
-				if (!res.ok) {
-					throw new Error(data.error || "Something went wrong");
-				}
-				return data;
-			} catch (error) {
-				throw new Error(error.message);
-			}
-		},
+		queryFn: () => apiRequest(`/api/posts/user/${username}`),
 		enabled: !!user,
 	});
 
@@ -79,6 +61,7 @@ const ProfilePage = () => {
 				state === "coverImg" && setCoverImg(reader.result);
 				state === "profileImg" && setProfileImg(reader.result);
 			};
+			reader.onerror = () => toast.error("Could not read the selected image");
 			reader.readAsDataURL(file);
 		}
 	};
@@ -87,7 +70,12 @@ const ProfilePage = () => {
 		<div className='w-full border-r border-gray-700 min-h-screen'> {/* Removed flex-[4_4_0] */}
 				{/* HEADER */}
 				{(isLoading || isRefetching) && <ProfileHeaderSkeleton />}
-				{!isLoading && !isRefetching && !user && <p className='text-center text-lg mt-4'>User not found</p>}
+				{!isLoading && !isRefetching && isError && (
+					<p className='text-center text-lg mt-4 text-red-400'>{error.message}</p>
+				)}
+				{!isLoading && !isRefetching && !isError && !user && (
+					<p className='text-center text-lg mt-4'>User not found</p>
+				)}
 				<div className='flex flex-col'>
 					{!isLoading && !isRefetching && user && (
 						<>
@@ -160,9 +148,14 @@ const ProfilePage = () => {
 									<button
 										className='btn btn-primary rounded-full btn-sm text-white px-4 ml-2'
 										onClick={async () => {
-											await updateProfile({ coverImg, profileImg });
-											setProfileImg(null);
-											setCoverImg(null);
+											try {
+												await updateProfile({ coverImg, profileImg });
+												setProfileImg(null);
+												setCoverImg(null);
+											} catch {
+												// Reported by the hook's onError toast; keep the
+												// selected images so the user can retry.
+											}
 										}}
 									>
 										{isUpdatingProfile ? "Updating..." : "Update"}

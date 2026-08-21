@@ -7,28 +7,17 @@ import { Link, useLocation } from "react-router-dom";
 import { BiLogOut } from "react-icons/bi";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { apiRequest } from "../../utils/api";
 
 const Sidebar = () => {
     const queryClient = useQueryClient();
     const location = useLocation();
 
     const { mutate: logout } = useMutation({
-        mutationFn: async () => {
-            try {
-                const res = await fetch("/api/auth/logout", {
-                    method: "POST",
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-            } catch (error) {
-                throw new Error(error.message || "Something went wrong");
-            }
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["authUser"] });
-        },
-        onError: () => {
-            toast.error("Logout failed");
+        mutationFn: () => apiRequest("/api/auth/logout", { method: "POST" }),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["authUser"] }),
+        onError: (error) => {
+            toast.error(`Logout failed: ${error.message}`);
         },
     });
 

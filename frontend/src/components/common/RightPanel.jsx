@@ -5,37 +5,22 @@ import { useState } from "react";
 import { IoSearchOutline } from "react-icons/io5";
 import LoadingSpinner from "./LoadingSpinner";
 import toast from "react-hot-toast";
+import { apiRequest } from "../../utils/api";
 
 const RightPanel = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const queryClient = useQueryClient();
 
-    const { data: suggestedUsers, isLoading } = useQuery({
+    const { data: suggestedUsers, isLoading, isError, error } = useQuery({
         queryKey: ["suggestedUsers"],
-        queryFn: async () => {
-            try {
-                const res = await fetch("/api/users/suggested");
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        }
+        queryFn: () => apiRequest("/api/users/suggested"),
     });
 
     const { data: searchResults, refetch: searchUsers, isFetching: isSearching, isError: isSearchError, error: searchError } = useQuery({
         queryKey: ["searchUsers", searchQuery],
-        queryFn: async () => {
+        queryFn: () => {
             if (!searchQuery) return [];
-            try {
-                const res = await fetch(`/api/users/search/${searchQuery}`);
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
+            return apiRequest(`/api/users/search/${encodeURIComponent(searchQuery)}`);
         },
         enabled: false,
     });
@@ -46,24 +31,12 @@ const RightPanel = () => {
     };
 
     const { mutate: follow, isPending, variables: pendingUserId } = useMutation({
-        mutationFn: async (userId) => {
-            try {
-                const res = await fetch(`/api/users/follow/${userId}`, {
-                    method: "POST",
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Something went wrong");
-                return data;
-            } catch (error) {
-                throw new Error(error.message);
-            }
-        },
-        onSuccess: () => {
+        mutationFn: (userId) => apiRequest(`/api/users/follow/${userId}`, { method: "POST" }),
+        onSuccess: () =>
             Promise.all([
                 queryClient.invalidateQueries({ queryKey: ["suggestedUsers"] }),
                 queryClient.invalidateQueries({ queryKey: ["authUser"] }),
-            ]);
-        },
+            ]),
         onError: (error) => {
             toast.error(error.message);
         },
@@ -143,6 +116,9 @@ const RightPanel = () => {
                                 <RightPanelSkeleton />
                                 <RightPanelSkeleton />
                             </>
+                        )}
+                        {!isLoading && isError && (
+                            <p className='text-red-400 text-xs text-center'>{error.message}</p>
                         )}
                         {!isLoading &&
                             suggestedUsers?.map((user) => (

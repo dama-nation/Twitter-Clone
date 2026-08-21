@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
+import { apiRequest } from "../../utils/api";
 
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 
@@ -10,37 +11,16 @@ import { FaHeart } from "react-icons/fa6";
 
 const NotificationPage = () => {
 	const queryClient = useQueryClient();
-	const { data: notifications, isLoading } = useQuery({
+	const { data: notifications, isLoading, isError, error, refetch } = useQuery({
 		queryKey: ["notifications"],
-		queryFn: async () => {
-			try {
-				const res = await fetch("/api/notifications");
-				const data = await res.json();
-				if (!res.ok) throw new Error(data.error || "Something went wrong");
-				return data;
-			} catch (error) {
-				throw new Error(error);
-			}
-		},
+		queryFn: () => apiRequest("/api/notifications"),
 	});
 
 	const { mutate: deleteNotifications } = useMutation({
-		mutationFn: async () => {
-			try {
-				const res = await fetch("/api/notifications", {
-					method: "DELETE",
-				});
-				const data = await res.json();
-
-				if (!res.ok) throw new Error(data.error || "Something went wrong");
-				return data;
-			} catch (error) {
-				throw new Error(error);
-			}
-		},
+		mutationFn: () => apiRequest("/api/notifications", { method: "DELETE" }),
 		onSuccess: () => {
 			toast.success("Notifications deleted successfully");
-			queryClient.invalidateQueries({ queryKey: ["notifications"] });
+			return queryClient.invalidateQueries({ queryKey: ["notifications"] });
 		},
 		onError: (error) => {
 			toast.error(error.message);
@@ -71,7 +51,17 @@ const NotificationPage = () => {
 						<LoadingSpinner size='lg' />
 					</div>
 				)}
-				{notifications?.length === 0 && <div className='text-center p-4 font-bold'>No notifications 🤔</div>}
+				{isError && (
+					<div className='flex flex-col items-center gap-2 p-4'>
+						<p className='text-red-400 text-sm'>{error.message}</p>
+						<button className='btn btn-sm rounded-full' onClick={() => refetch()}>
+							Retry
+						</button>
+					</div>
+				)}
+				{!isError && notifications?.length === 0 && (
+					<div className='text-center p-4 font-bold'>No notifications 🤔</div>
+				)}
 				{notifications?.map((notification) => (
 					<div className='border-b border-gray-700' key={notification._id}>
 						<div className='flex gap-2 p-4'>

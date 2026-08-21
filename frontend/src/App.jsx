@@ -10,21 +10,21 @@ import SearchPage from './pages/search/SearchPage.jsx';
 import { Toaster } from 'react-hot-toast';
 import LoadingSpinner from './components/common/LoadingSpinner.jsx';
 import { useQuery } from '@tanstack/react-query';
+import { ApiError, apiRequest } from './utils/api.js';
 
 function App() {
-    const { data: authUser, isLoading } = useQuery({
+    const { data: authUser, isLoading, isError, error } = useQuery({
         queryKey: ["authUser"],
         queryFn: async () => {
             try {
-                const res = await fetch("/api/auth/me");
-                const data = await res.json();
-                if (data.error) return null;
-                if (!res.ok) {
-                    throw new Error(data.error || "Something went wrong");
+                return await apiRequest("/api/auth/me");
+            } catch (err) {
+                // Only a missing/invalid session means "not logged in"; every
+                // other failure must surface instead of silently logging out.
+                if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
+                    return null;
                 }
-                return data;
-            } catch (error) {
-                throw new Error(error.message || "Something went wrong");
+                throw err;
             }
         },
         retry: false,
@@ -34,6 +34,18 @@ function App() {
         return (
             <div className='h-screen flex justify-center items-center'>
                 <LoadingSpinner size='lg' />
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className='h-screen flex flex-col gap-3 justify-center items-center text-center px-6'>
+                <p className='text-red-400 font-semibold'>We could not load your session</p>
+                <p className='text-gray-500 text-sm'>{error.message}</p>
+                <button className='btn btn-sm rounded-full' onClick={() => window.location.reload()}>
+                    Try again
+                </button>
             </div>
         );
     }

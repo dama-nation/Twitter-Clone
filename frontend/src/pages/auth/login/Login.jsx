@@ -9,6 +9,7 @@ import {
     MdOutlineVisibilityOff
 } from "react-icons/md";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "../../../utils/api";
 
 const LoginPage = () => {
     const [formData, setFormData] = useState({
@@ -24,28 +25,9 @@ const LoginPage = () => {
         isError,
         error,
     } = useMutation({
-        mutationFn: async ({ username, password }) => {
-            try {
-                const res = await fetch("/api/auth/login", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ username, password }),
-                });
-
-                const data = await res.json();
-                if (!res.ok) {
-                    throw new Error(data.error || "Invalid username or password");
-                }
-                return data;
-            } catch (error) {
-                throw new Error(error.message || "Failed to log in");
-            }
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["authUser"] });
-        },
+        mutationFn: ({ username, password }) =>
+            apiRequest("/api/auth/login", { method: "POST", body: { username, password } }),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["authUser"] }),
     });
 
     const handleSubmit = (e) => {
