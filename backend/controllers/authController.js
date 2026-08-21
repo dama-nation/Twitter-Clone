@@ -1,13 +1,19 @@
 import { generateTokenAndSetCookie } from "../lib/utils/generateToken.js";
 import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
+import { emailRegex, isNonEmptyString } from "../lib/utils/validate.js";
 
 export const signup = async (req, res) => {
     try{
         const {fullName, username, email, password} = req.body;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if(![fullName, username, email, password].every(isNonEmptyString)){
+            return res.status(400).json({error: "fullName, username, email and password are required"});
+        }
         if(!emailRegex.test(email)){
             return res.status(400).json({error: "Invalid email format"});
+        }
+        if(!/^[a-zA-Z0-9_]{3,30}$/.test(username)){
+            return res.status(400).json({error: "Username must be 3-30 characters (letters, numbers, underscores)"});
         }
         const existingUser = await User.findOne({username});
         if(existingUser){
@@ -32,8 +38,8 @@ export const signup = async (req, res) => {
         });
 
         if(newUser){
-            generateTokenAndSetCookie(newUser._id, res);
             await newUser.save();
+            generateTokenAndSetCookie(newUser._id, res);
 
             res.status(201).json({
                 _id: newUser._id,
@@ -58,6 +64,9 @@ export const signup = async (req, res) => {
 export const login = async (req, res) => {
     try{
         const {username, password} = req.body;
+        if(!isNonEmptyString(username) || !isNonEmptyString(password)){
+            return res.status(400).json({error: "Invalid username or password"});
+        }
         const user = await User.findOne({username});
         const correctPassword = await bcrypt.compare(password, user?.password || "");
 
@@ -85,7 +94,12 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
     try{
-        res.cookie("jwt", "", {maxAge: 0});
+        res.cookie("jwt", "", {
+            maxAge: 0,
+            httpOnly: true,
+            sameSite: "strict",
+            secure: process.env.NODE_ENV !== "development",
+        });
         res.status(200).json({message: "User logged out successfully"})
     } catch(error){
         console.log(`Error in logging out user: ${error.message}`)

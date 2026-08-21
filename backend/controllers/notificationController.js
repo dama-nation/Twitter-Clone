@@ -1,5 +1,5 @@
 import Notification from '../models/notificationModel.js'
-import User from '../models/userModel.js'
+import mongoose from 'mongoose'
 
 export const getNotifications = async (req, res) => {
     try{
@@ -13,14 +13,17 @@ export const getNotifications = async (req, res) => {
         res.status(200).json(notifications)
     }catch(error){
         console.log("Error in getting notifications:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 }
 
 export const deleteNotification = async (req, res) => {
     try{
         const notificationId = req.params.id
-        const userId = req.user._id
+        const userId = req.user._id.toString()
+        if(!mongoose.Types.ObjectId.isValid(notificationId)){
+            return res.status(400).json({error: "Invalid notification id"})
+        }
         const notification = await Notification.findById(notificationId)
 
         if(!notification){return res.status(404).json({error: "Notification not found"})}
@@ -30,7 +33,7 @@ export const deleteNotification = async (req, res) => {
         res.status(200).json({message: "Notification deleted successfully"})
     }catch(error){
         console.log("Error in deleting notification:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 }
 
@@ -41,6 +44,6 @@ export const deleteAllNotifications = async (req, res) => {
         res.status(200).json({message: "Notifications deleted successfully"})
     }catch(error){
         console.log("Error in deleting notifications:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 }

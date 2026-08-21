@@ -2,11 +2,13 @@ import  User  from "../models/userModel.js";
 import Notification from "../models/notificationModel.js";
 import { v2 as cloudinary } from 'cloudinary'
 import bcrypt from 'bcryptjs'
+import mongoose from 'mongoose'
+import { emailRegex, escapeRegex, isNonEmptyString } from '../lib/utils/validate.js'
 
 export const getProfile = async (req, res) => {
     const {username} = req.params;
     try{
-        const user = await User.findOne({username}).select("-password");
+        const user = await User.findOne({username}).select("-password -email");
         if(!user){return res.status(404).json({error: "User not found"});}
         res.status(200).json(user);
     } catch (error){
@@ -18,6 +20,7 @@ export const getProfile = async (req, res) => {
 export const followUser = async (req, res) => {
     try{
         const { id } = req.params;
+        if(!mongoose.Types.ObjectId.isValid(id)){return res.status(400).json({error: "Invalid user id"});}
         const currentUser = await User.findById(req.user._id);
         const userToFollow = await User.findById(id);
 
@@ -46,7 +49,7 @@ export const followUser = async (req, res) => {
         }
     } catch (error){
         console.log("Error in the followUser ", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 };
 
@@ -68,12 +71,15 @@ export const getSuggestedUsers = async (req, res) => {
 		const filteredUsers = users.filter((user) => !followingIds.includes(user._id.toString()));
 		const suggestedUsers = filteredUsers.slice(0, 4);
 
-		suggestedUsers.forEach((user) => (user.password = null));
+		suggestedUsers.forEach((user) => {
+			delete user.password;
+			delete user.email;
+		});
 
 		res.status(200).json(suggestedUsers);
 	} catch (error) {
 		console.log("Error in getSuggestedUsers: ", error.message);
-		res.status(500).json({ error: error.message });
+		res.status(500).json({ error: "Internal server error" });
 	}
 };
 
@@ -89,7 +95,23 @@ export const updateUser = async (req, res) => {
 
         if((!newPassword && currentPassword) || (!currentPassword && newPassword)){
             return res.status(400).json({error: "Please provide both current and new password"})
-// Tell Abba to go to procurement
+        }
+        for(const [field, value] of Object.entries({fullName, email, username, currentPassword, newPassword, bio, link, profileImg, coverImg})){
+            if(value !== undefined && typeof value !== "string"){
+                return res.status(400).json({error: `${field} must be a string`})
+            }
+        }
+        if(email && !emailRegex.test(email)){
+            return res.status(400).json({error: "Invalid email format"})
+        }
+        if(username && !/^[a-zA-Z0-9_]{3,30}$/.test(username)){
+            return res.status(400).json({error: "Username must be 3-30 characters (letters, numbers, underscores)"})
+        }
+        if(username && username !== user.username && await User.exists({username})){
+            return res.status(400).json({error: "Username already exists"})
+        }
+        if(email && email !== user.email && await User.exists({email})){
+            return res.status(400).json({error: "Email already exists"})
         }
         if(currentPassword &&newPassword){
             const isPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
@@ -127,7 +149,7 @@ export const updateUser = async (req, res) => {
 
     } catch(error){
         console.log("Error in updating user:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 }
 
@@ -136,19 +158,24 @@ export const searchUsers = async (req, res) => {
         const { query } = req.params;
         
         // Return empty array if search is empty
-        if (!query) return res.status(200).json([]); 
+        if (!isNonEmptyString(query)) return res.status(200).json([]);
+        if (query.length > 50) return res.status(400).json({ error: "Search query is too long" });
 
-        // Use $regex for partial matching and $options: "i" for case-insensitivity
+        // Escape the query so user input cannot inject regex syntax (ReDoS)
+        const safeQuery = escapeRegex(query);
+
         const users = await User.find({
             $or: [
-                { username: { $regex: query, $options: "i" } },
-                { fullName: { $regex: query, $options: "i" } }
+                { username: { $regex: safeQuery, $options: "i" } },
+                { fullName: { $regex: safeQuery, $options: "i" } }
             ]
-        }).select("-password"); // Exclude passwords from the results
+        })
+            .select("-password -email") // Exclude credentials and emails from the results
+            .limit(20);
 
         res.status(200).json(users);
     } catch (error) {
         console.log("Error in searchUsers: ", error.message);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Internal server error" });
     }
 };
