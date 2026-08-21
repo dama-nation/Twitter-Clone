@@ -2,6 +2,10 @@ import { v2 as cloudinary } from 'cloudinary'
 import Notification from '../models/notificationModel.js'
 import Post from '../models/postModel.js'
 import User from '../models/userModel.js'
+import mongoose from 'mongoose'
+
+const MAX_POST_LENGTH = 500;
+const MAX_COMMENT_LENGTH = 280;
 
 export const createPost = async (req, res) => {
     try {
@@ -15,6 +19,15 @@ export const createPost = async (req, res) => {
 
         if (!text && !image) {
             return res.status(400).json({ error: "Please provide text or image" });
+        }
+        if (text !== undefined && typeof text !== "string") {
+            return res.status(400).json({ error: "text must be a string" });
+        }
+        if (image !== undefined && typeof image !== "string") {
+            return res.status(400).json({ error: "image must be a string" });
+        }
+        if (text && text.length > MAX_POST_LENGTH) {
+            return res.status(400).json({ error: `text must be at most ${MAX_POST_LENGTH} characters` });
         }
 
         if (image) {
@@ -35,12 +48,15 @@ export const createPost = async (req, res) => {
         res.status(201).json(newPost);
     } catch (error) {
         console.log("Error in creating post:", error.message);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Internal server error" });
     }
 };
 
 export const deletePost = async (req, res) => {
     try{
+        if(!mongoose.Types.ObjectId.isValid(req.params.id)){
+            return res.status(400).json({error: "Invalid post id"})
+        }
         const post = await Post.findById(req.params.id)
         if(!post){
             return res.status(404).json({error: "Post not found"})
@@ -57,7 +73,7 @@ export const deletePost = async (req, res) => {
 
     }catch(error){
         console.error("Error in deleting post:", error);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 };
 
@@ -67,7 +83,13 @@ export const commentOnPost = async (req, res) => {
         const postId = req.params.id
         const userId = req.user._id.toString()
 
-        if(!text){return res.status(400).json({error: "Please Provide Text"})}
+        if(!text || typeof text !== "string"){return res.status(400).json({error: "Please Provide Text"})}
+        if(text.length > MAX_COMMENT_LENGTH){
+            return res.status(400).json({error: `text must be at most ${MAX_COMMENT_LENGTH} characters`})
+        }
+        if(!mongoose.Types.ObjectId.isValid(postId)){
+            return res.status(400).json({error: "Invalid post id"})
+        }
         const post = await Post.findById(postId)
         if(!post){return res.status(404).json({error: "Post not found"})}
 
@@ -77,7 +99,7 @@ export const commentOnPost = async (req, res) => {
         res.status(200).json(post)
     }catch(error){
         console.log('Error in commenting: ', error)
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 };
 
@@ -85,6 +107,10 @@ export const likeUnlikePost = async (req, res) => {
     try {
         const userId = req.user._id.toString();
         const { id: postId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(postId)) {
+            return res.status(400).json({ error: "Invalid post id" });
+        }
 
         const post = await Post.findById(postId);
         
@@ -126,7 +152,7 @@ export const likeUnlikePost = async (req, res) => {
 export const getAllPosts = async (req, res) => {
     try{
         const posts = await Post.find().sort({ createdAt: -1}).
-        populate({path: 'user', select: '-password'}).populate({path: 'comments.user', select: '-password'})
+        populate({path: 'user', select: '-password -email'}).populate({path: 'comments.user', select: '-password -email'})
 
         if(posts.length === 0){
             return res.status(200).json([])
@@ -134,36 +160,37 @@ export const getAllPosts = async (req, res) => {
         res.status(200).json(posts)
     }catch(error){
         console.log("Error in getting all posts:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 };
 
 export const getLikedPosts = async (req, res) => {
     const userId = req.params.id
     try{
+        if(!mongoose.Types.ObjectId.isValid(userId)){return res.status(400).json({error: "Invalid user id"})}
         const user = await User.findById(userId);
         if(!user){return res.status(404).json({error: "User not found"})}
 
         const likedPosts = await Post.find({_id: {$in: user.likedPosts}})
         .populate({
             path: 'user',
-            select: '-password'
+            select: '-password -email'
         })
         .populate({
             path: 'comments.user',
-            select: '-password'
+            select: '-password -email'
         })
         res.status(200).json(likedPosts)
     }catch(error){
         console.log("Error in getting liked posts:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 };
 
 export const getFollowingPosts = async (req, res) => {
     try{
         const user = await User.findById(req.user._id)
-        if(!user){res.status(404).json({error: "User not found"})}
+        if(!user){return res.status(404).json({error: "User not found"})}
 
         const following = user.following
 
@@ -171,16 +198,16 @@ export const getFollowingPosts = async (req, res) => {
         .sort({createdAt: -1})
         .populate({
             path: 'user',
-            select: '-password'
+            select: '-password -email'
         })
         .populate({
             path: 'comments.user',
-            select: '-password'
+            select: '-password -email'
         })
         res.status(200).json(feedPosts)
     }catch(error){
         console.log("Error in getting following posts:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 };
 
@@ -188,21 +215,21 @@ export const getUserPosts = async (req, res) => {
     try{
         const { username } = req.params
         const user = await User.findOne({ username })
-        if(!user){res.status(400).json({error: "User not found"})}
+        if(!user){return res.status(404).json({error: "User not found"})}
 
         const posts = await Post.find({user: user._id})
         .sort({createdAt: -1})
         .populate({
             path: 'user',
-            select: '-password'
+            select: '-password -email'
         })
         .populate({
             path: 'comments.user',
-            select: '-password'
+            select: '-password -email'
         })
         res.status(200).json(posts)
     }catch(error){
         console.log("Error in getting user posts:", error.message);
-        res.status(500).json({error: error.message})
+        res.status(500).json({error: "Internal server error"})
     }
 }

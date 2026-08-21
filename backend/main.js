@@ -8,7 +8,14 @@ import cookieparser from 'cookie-parser'
 import { v2 as cloudinary } from 'cloudinary'
 import postRoutes from "./routes/post.js";
 import notificationRoutes from "./routes/notification.js";
+import { apiLimiter, authLimiter } from "./middleware/rateLimit.js";
 
+const requiredEnv = ["MONGODB_URI", "JWT_SECRET"];
+const missingEnv = requiredEnv.filter((name) => !process.env[name]);
+if (missingEnv.length > 0) {
+    console.error(`Missing required environment variables: ${missingEnv.join(", ")}`);
+    process.exit(1);
+}
 
 const app = express();
 
@@ -25,6 +32,9 @@ app.use(express.json({ limit: "5mb" }));// Middleware to parse req.body
 app.use(express.urlencoded({extended: true})) //parse form data(urlencoded)
 app.use(cookieparser())
 
+app.use('/api', apiLimiter)
+app.use('/api/auth/login', authLimiter)
+app.use('/api/auth/signup', authLimiter)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes)
 app.use('/api/posts', postRoutes)
